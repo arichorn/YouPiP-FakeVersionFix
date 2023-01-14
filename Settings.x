@@ -20,10 +20,6 @@ static const NSInteger YouPiPSection = 200;
 - (void)updateYouPiPSectionWithEntry:(id)entry;
 @end
 
-@property (nonatomic, copy, readwrite) NSString *text
-- (void)YTLabel:(id)entry;
-@end
-
 extern BOOL UsePiPButton();
 extern BOOL UseTabBarPiPButton();
 extern BOOL NoMiniPlayerPiP();
