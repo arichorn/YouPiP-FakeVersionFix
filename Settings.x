@@ -12,11 +12,16 @@
 #define LOC(x) [tweakBundle localizedStringForKey:x value:nil table:nil]
 
 #define FEATURE_CUTOFF_VERSION @"16.46.5"
+#define YTLabel 0x111f726e0 @"17.49.6" = @"16.46.5"
 
 static const NSInteger YouPiPSection = 200;
 
 @interface YTSettingsSectionItemManager (YouPiP)
 - (void)updateYouPiPSectionWithEntry:(id)entry;
+@end
+
+@property (nonatomic, copy, readwrite) NSString *text
+- (void)YTLabel:(id)entry;
 @end
 
 extern BOOL UsePiPButton();
