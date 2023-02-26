@@ -37,6 +37,10 @@ BOOL PiPDisabled = NO;
 extern BOOL LegacyPiP();
 extern YTHotConfig *(*InjectYTHotConfig)(void);
 
+BOOL TweakEnabled() {
+    return [[NSUserDefaults standardUserDefaults] boolForKey:EnabledKey];
+}
+
 BOOL UsePiPButton() {
     return [[NSUserDefaults standardUserDefaults] boolForKey:PiPActivationMethodKey];
 }
@@ -326,6 +330,14 @@ static NSMutableArray *topControls(YTMainAppControlsOverlayView *self, NSMutable
 
 %end
 
+%hook AVSampleBufferDisplayLayerPlayerController
+
+- (void)setPictureInPictureAvailable:(BOOL)available {
+    %orig(YES);
+}
+
+%end
+
 %hook MLPIPController
 
 - (void)activatePiPController {
@@ -578,6 +590,7 @@ NSBundle *YouPiPBundle() {
 }
 
 %ctor {
+    if (!TweakEnabled()) return;
     NSBundle *tweakBundle = YouPiPBundle();
     PiPVideoPath = [tweakBundle pathForResource:@"PiPPlaceholderAsset" ofType:@"mp4"];
     PiPIconPath = [tweakBundle pathForResource:@"yt-pip-overlay" ofType:@"png"];
