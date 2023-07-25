@@ -26,7 +26,6 @@ NSString *TweakName = @"TweakName";
 - (void)updateYouPiPSectionWithEntry:(id)entry;
 @end
 
-extern NSString *CompatibilityModeKey;
 extern BOOL TweakEnabled();
 extern BOOL UsePiPButton();
 extern BOOL UseTabBarPiPButton();
