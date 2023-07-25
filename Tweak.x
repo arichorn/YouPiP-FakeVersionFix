@@ -26,6 +26,13 @@
 
 #define PiPButtonType 801
 
+extern NSString *EnabledKey;
+extern NSString *PiPActivationMethodKey;
+extern NSString *NoMiniPlayerPiPKey;
+extern NSString *PiPActivationMethod2Key;
+extern NSString *NonBackgroundableKey;
+extern NSString *FakeVersionKey;
+
 @interface YTMainAppControlsOverlayView (YP)
 @property (retain, nonatomic) YTQTMButton *pipButton;
 - (void)didPressPiP:(id)arg;
