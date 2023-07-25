@@ -16,6 +16,7 @@
 
 extern BOOL TweakEnabled();
 extern BOOL isPictureInPictureActive(MLPIPController *);
+extern NSString *CompatibilityModeKey;
 
 BOOL hasSampleBufferPiP;
 BOOL isLegacyVersion;
