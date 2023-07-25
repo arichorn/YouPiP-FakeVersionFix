@@ -17,6 +17,15 @@ static const NSInteger YouPiPSection = 200;
 - (void)updateYouPiPSectionWithEntry:(id)entry;
 @end
 
+NSString *EnabledKey = @"EnabledKey";
+NSString *PiPActivationMethodKey = @"PiPActivationMethodKey";
+NSString *PiPActivationMethod2Key = @"PiPActivationMethod2Key";
+NSString *NoMiniPlayerPiPKey = @"NoMiniPlayerPiPKey";
+NSString *CompatibilityModeKey = @"CompatibilityModeKey";
+NSString *NonBackgroundableKey = @"NonBackgroundableKey";
+NSString *FakeVersionKey = @"FakeVersionKey";
+NSString *TweakName = @"YouPiP";
+
 extern BOOL TweakEnabled();
 extern BOOL UsePiPButton();
 extern BOOL UseTabBarPiPButton();
