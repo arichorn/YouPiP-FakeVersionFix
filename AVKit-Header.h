@@ -6,7 +6,7 @@
 @end
 
 @interface AVPictureInPictureControllerContentSource (Private)
-@property(assign) bool hasInitialRenderSize;
+@property (nonatomic) BOOL hasInitialRenderSize;
 @end
 
 @interface AVPictureInPictureController (Private)
