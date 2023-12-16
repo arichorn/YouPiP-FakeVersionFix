@@ -133,94 +133,73 @@ static void bootstrapPiP(YTPlayerViewController *self, BOOL playPiP) {
 
 #pragma mark - Video tab bar PiP Button
 
-static YTISlimMetadataButtonSupportedRenderers *makeUnderPlayerButton(NSString *title, int iconType, NSString *browseId) {
-    YTISlimMetadataButtonSupportedRenderers *supportedRenderer = [[%c(YTISlimMetadataButtonSupportedRenderers) alloc] init];
-    YTISlimMetadataButtonRenderer *metadataButtonRenderer = [[%c(YTISlimMetadataButtonRenderer) alloc] init];
-    YTIButtonSupportedRenderers *buttonSupportedRenderer = [[%c(YTIButtonSupportedRenderers) alloc] init];
-    YTIBrowseEndpoint *endPoint = [[%c(YTIBrowseEndpoint) alloc] init];
-    YTICommand *command = [[%c(YTICommand) alloc] init];
-    YTIButtonRenderer *button = [[%c(YTIButtonRenderer) alloc] init];
-    YTIIcon *icon = [[%c(YTIIcon) alloc] init];
-    endPoint.browseId = browseId;
-    command.browseEndpoint = endPoint;
-    icon.iconType = iconType;
-    button.style = 8; // Opacity style
-    button.tooltip = title;
-    button.size = 1; // Default size
-    button.isDisabled = NO;
-    button.text = [%c(YTIFormattedString) formattedStringWithString:title];
-    button.icon = icon;
-    button.navigationEndpoint = command;
-    buttonSupportedRenderer.buttonRenderer = button;
-    metadataButtonRenderer.button = buttonSupportedRenderer;
-    supportedRenderer.slimMetadataButtonRenderer = metadataButtonRenderer;
-    return supportedRenderer;
+static UIButton *makeUnderPlayerButton(ELMCellNode *node, NSString *title, NSString *accessibilityLabel) {
+    ELMContainerNode *containerNode = (ELMContainerNode *)node.yogaChildren[0].yogaChildren[0]; // To get node container properties
+    UIButton *buttonView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 65, containerNode.calculatedSize.height)];
+    buttonView.center = CGPointMake(CGRectGetMaxX([node.layoutAttributes frame]) + 65 / 2, CGRectGetMidY([node.layoutAttributes frame]));
+    buttonView.backgroundColor = containerNode.backgroundColor;
+    buttonView.accessibilityLabel = accessibilityLabel;
+    buttonView.layer.cornerRadius = 16;
+
+    UIImageView *buttonImage = [[UIImageView alloc] initWithFrame:CGRectMake(12, ([buttonView frame].size.height - 15.5) / 2, 15.5, 15.5)];
+    buttonImage.image = [%c(QTMIcon) tintImage:[UIImage imageWithContentsOfFile:TabBarPiPIconPath] color:[%c(YTColor) white1]];
+
+    UILabel *buttonTitle = [[UILabel alloc] initWithFrame:CGRectMake(33, 9, 20, 14)];
+    buttonTitle.font = [UIFont fontWithName:@".SFUIText-Semibold" size:12];
+    buttonTitle.textColor = [%c(YTColor) white3];
+    buttonTitle.text = title;
+
+    [buttonView addSubview:buttonImage];
+    [buttonView addSubview:buttonTitle];
+    return buttonView;
 }
 
-%hook YTIIcon
+%hook ASCollectionView
 
-- (UIImage *)iconImageWithColor:(UIColor *)color {
-    if (self.iconType == PiPButtonType) {
-        UIImage *image = [%c(QTMIcon) tintImage:[UIImage imageWithContentsOfFile:TabBarPiPIconPath] color:[[%c(YTPageStyleController) currentColorPalette] textPrimary]];
-        if ([image respondsToSelector:@selector(imageFlippedForRightToLeftLayoutDirection)])
-            image = [image imageFlippedForRightToLeftLayoutDirection];
-        return image;
+%property (retain, nonatomic) UIButton *pipButton;
+%property (retain, nonatomic) YTTouchFeedbackController *pipTouchController;
+
+- (BOOL)touchesShouldCancelInContentView:(id)arg1 {
+    return YES; // Ensure we can scroll
+}
+
+- (ELMCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath {
+    if (UseTabBarPiPButton() && [self.accessibilityIdentifier isEqual:@"id.video.scrollable_action_bar"] && !self.pipButton) {
+        self.contentInset = UIEdgeInsetsMake(0, 0, 0, 73);
+        if ([self numberOfItemsInSection:0] - 1 == indexPath.row) {
+            self.pipButton = makeUnderPlayerButton(%orig, @"PiP", @"Play in PiP");
+            [self addSubview:self.pipButton];
+
+            [self.pipButton addTarget:self action:@selector(didPressPiP:event:) forControlEvents:UIControlEventTouchUpInside];
+            YTTouchFeedbackController *controller = [[%c(YTTouchFeedbackController) alloc] initWithView:self.pipButton];
+            controller.touchFeedbackView.customCornerRadius = 16;
+            self.pipTouchController = controller;
+        }
     }
     return %orig;
 }
-%end
 
-%hook YTSlimVideoScrollableDetailsActionsView
-
-- (void)createActionViewsFromSupportedRenderers:(NSMutableArray *)renderers { // for old YouTube version
-    if (UseTabBarPiPButton()) {
-        YTISlimMetadataButtonSupportedRenderers *PiPButton = makeUnderPlayerButton(@"PiP", PiPButtonType, @"YouPiP.pip.command");
-        if (![renderers containsObject:PiPButton])
-            [renderers addObject:PiPButton];
+- (void)nodesDidRelayout:(NSArray <ELMCellNode *> *)nodes {
+    if (UseTabBarPiPButton() && [self.accessibilityIdentifier isEqual:@"id.video.scrollable_action_bar"] && [nodes count] == 1) {
+        CGFloat offset = nodes[0].calculatedSize.width - [nodes[0].layoutAttributes frame].size.width;
+        [UIView animateWithDuration:0.3 animations:^{
+            self.pipButton.center = (CGPoint){self.pipButton.center.x + offset, self.pipButton.center.y};
+        }];
     }
     %orig;
 }
 
-- (void)createActionViewsFromSupportedRenderers:(NSMutableArray *)renderers withElementsContextBlock:(id)arg2 {
-    if (UseTabBarPiPButton()) {
-        YTISlimMetadataButtonSupportedRenderers *PiPButton = makeUnderPlayerButton(@"PiP", PiPButtonType, @"YouPiP.pip.command");
-        if (![renderers containsObject:PiPButton])
-            [renderers addObject:PiPButton];
+%new(v@:@@)
+- (void)didPressPiP:(UIButton *)button event:(UIEvent *)event {
+    CGPoint location = [[[event allTouches] anyObject] locationInView:button];
+    if (CGRectContainsPoint(button.bounds, location)) {
+        UIViewController *controller = [self.collectionNode closestViewController];
+        YTPlaybackStrippedWatchController *provider = [controller valueForKey:@"_metadataPanelStateProvider"];
+        YTWatchViewController *watchViewController = [provider valueForKey:@"_watchViewController"];
+        YTPlayerViewController *playerViewController = [watchViewController valueForKey:@"_playerViewController"];
+        FromUser = YES;
+        bootstrapPiP(playerViewController, YES);
     }
-    %orig;
-}
-
-%end
-
-%hook YTSlimVideoDetailsActionView
-
-- (void)didTapButton:(id)arg1 {
-    if ([self.label.attributedText.string isEqualToString:@"PiP"]) {
-        YTSlimVideoScrollableActionBarCellController *_delegate = self.delegate;
-        YTPlayerViewController *playerViewController = nil;
-        @try {
-            id provider = [_delegate valueForKey:@"_metadataPanelStateProvider"];
-            if ([provider isKindOfClass:%c(YTWatchController)] || [provider isKindOfClass:%c(YTPlaybackStrippedWatchController)]) {
-                @try {
-                    YTWatchViewController *watchViewController = [provider valueForKey:@"_watchViewController"];
-                    playerViewController = [watchViewController valueForKey:@"_playerViewController"];
-                } @catch (id ex) {
-                    playerViewController = [provider valueForKey:@"_playerViewController"];
-                }
-            }
-        } @catch (id ex) { // for old YouTube version
-            if ([[_delegate valueForKey:@"_ngwMetadataPanelStateProvider"] isKindOfClass:%c(YTNGWatchController)]) {
-                id provider = [_delegate valueForKey:@"_ngwMetadataPanelStateProvider"];
-                playerViewController = [provider valueForKey:@"_playerViewController"];
-            }
-        }
-        if (playerViewController && [playerViewController isKindOfClass:%c(YTPlayerViewController)]) {
-            FromUser = YES;
-            bootstrapPiP(playerViewController, YES);
-        }
-        return;
-    }
-    %orig;
 }
 
 %end
